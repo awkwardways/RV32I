@@ -1,153 +1,115 @@
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
 use std.env.finish;
 
-entity ALUTB is
+entity ALUTB is 
 end entity ALUTB;
 
-architecture sim of ALUTB is 
-  signal a_tb      : std_logic_vector(31 downto 0);
-  signal b_tb      : std_logic_vector(31 downto 0);
-  signal s_tb      : std_logic_vector(31 downto 0);
-  signal c_in_tb   : std_logic;
-  signal c_out_tb  : std_logic;
-  signal op_sel_tb : std_logic_vector(9 downto 0);
+architecture sim of ALUTB is
+  constant DATA_WIDTH : integer := 32;
+  signal a_tb      : std_logic_vector(DATA_WIDTH - 1 downto 0);
+  signal b_tb      : std_logic_vector(DATA_WIDTH - 1 downto 0);
+  signal c_tb      : std_logic_vector(DATA_WIDTH - 1 downto 0);
+  signal op_select_tb : std_logic_vector(2 downto 0);
   signal enable_tb : std_logic;
-
+  signal modifier_tb  : std_logic; 
 begin
 
-
-
-  UUT: entity work.ALU(behavioural)
+  UUT: entity work.ALU(rtl)
+  generic map(
+    A_WIDTH => DATA_WIDTH,
+    B_WIDTH => DATA_WIDTH,
+    C_WIDTH => DATA_WIDTH
+  )
   port map(
-    a_in => a_tb,
-    b_in => b_tb, 
-    c_in => c_in_tb,
-    c_out => c_out_tb,
-    s => s_tb,
-    op_select => op_sel_tb,
-    enable => enable_tb
+    a => a_tb,
+    b => b_tb,
+    c => c_tb,
+    modifier => modifier_tb,
+    enable => enable_tb,
+    op_select => op_select_tb
   );
 
   stimuli: process
-    variable a_state : unsigned(31 downto 0);
-    variable b_state : unsigned(31 downto 0);
   begin
-
-    op_sel_tb <= 10x"03";
-    --Sum test
     enable_tb <= '0';
-    a_state := x"7f034100";
-    b_state := x"101148fb";
-    a_tb <= std_logic_vector(a_state);
-    b_tb <= std_logic_vector(b_state);
-    c_in_tb <= '0';
-    wait for 2 ns;
-    assert s_tb = x"8f1489fb" report "ALU TEST: Adder is not summing correctly, 0x7f034100 + 0x101148fb does not yield expected 0x8f1489fb" severity failure;
-    c_in_tb <= '1';
-    wait for 2 ns;
-    assert s_tb = x"8f1489fc" report "ALU TEST: Adder is not summing correctly, 0x7f034100 + 0x101148fb + Cin does not yield expected 0x8f1489fc" severity failure;
-
-    --Sum with carry test
-    a_state := x"f81400aa";
-    b_state := x"21f5112b";
-    a_tb <= std_logic_vector(a_state);
-    b_tb <= std_logic_vector(b_state);
-    c_in_tb <= '0';
-    wait for 2 ns;
-    assert s_tb = x"1a0911d5" and c_out_tb = '1' report "ALU TEST: Adder is not summing correctly, 0xf81400aa + 0x21f5112b does not yield expected output. c_out is " /* & std_logic'image(c_out_tb) & ". s is" & std_logic_vector(s_tb)'image */ severity failure;
-    c_in_tb <= '1';
-    wait for 2 ns;
-    assert s_tb = x"1a0911d6" and c_out_tb = '1' report "ALU TEST: Adder is not summing correctly, 0xf81400aa + 0x21f5112b does not yield expected output. c_out is " /* & std_logic'image(c_out_tb) & ". s is" & std_logic_vector(s_tb)'image */ severity failure;
-    report "ALU TEST: ADDER ENABLED Ok!";
-
-    --Disabled test
-    --enable_tb <= '1';
-    --a_state := x"7f034100";
-    --b_state := x"101148fb";
-    --a_tb <= std_logic_vector(a_state);
-    --b_tb <= std_logic_vector(b_state);
-    --c_in_tb <= '0';
-    --wait for 2 ns;
-    --assert s_tb = 32x"Z" and c_out_tb = '0' report "ALU TEST: Adder is not getting disabled. Sum performed." severity failure;
-    --c_in_tb <= '1';
-    --wait for 2 ns;
-    --assert s_tb = 32x"Z" and c_out_tb = '0' report "ALU TEST: Adder is not getting disabled when Cin is set. Sum performed." severity failure;
-
-    --Sum with carry test
-    --a_state := x"f81400aa";
-    --b_state := x"21f5112b";
-    --a_tb <= std_logic_vector(a_state);
-    --b_tb <= std_logic_vector(b_state);
-    --c_in_tb <= '0';
-    --wait for 2 ns;
-    --assert s_tb = 32x"Z" and c_out_tb = '0' report "ALU TEST: Adder is not getting disabled. Sum performed " /* & c_out'image & ". s is" & s'image */ severity failure;
-    --c_in_tb <= '1';
-    --wait for 2 ns;
-    --assert s_tb = 32x"Z" and c_out_tb = '0' report "ALU TEST: Adder is not getting disabled. Sum performed " /* & c_out'image & ". s is" & s'image */ severity failure;
-    --report "ALU TEST: ADDER DISABLED Ok!";
     
-    --Signed operations test
-    enable_tb <= '0';
-    a_state := 32x"1";
-    b_state := 32x"1";
-    a_tb <= std_logic_vector(a_state);
-    b_tb <= std_logic_vector(b_state);
-    c_in_tb <= '0';
-    op_sel_tb <= 10x"01";
+    --Addition
+    op_select_tb <= "000";
+    a_tb <= x"ffffffff";
+    b_tb <= x"ffffffff";
     wait for 2 ns;
-    assert s_tb = 32x"0" report "ALU TEST: Signed operation not being performed correctly" severity failure;
-    a_state := 32x"1";
-    b_state := 32x"1";
-    a_tb <= std_logic_vector(a_state);
-    b_tb <= std_logic_vector(b_state);
-    c_in_tb <= '0';
-    op_sel_tb <= 10x"00";
-    wait for 2 ns;
-    assert s_tb = x"fffffffe" report "ALU TEST: Signed operation not being performed correctly" severity failure;
-    a_state := 32x"3";
-    b_state := 32x"1";
-    a_tb <= std_logic_vector(a_state);
-    b_tb <= std_logic_vector(b_state);
-    c_in_tb <= '0';
-    op_sel_tb <= 10x"02";
-    wait for 2 ns;
-    assert s_tb = x"fffffffe" report "ALU TEST: Signed operation not being performed correctly" severity failure;
-    report "ALU TEST: SIGNED OPERATIONS Ok!";
+    assert c_tb = 32x"0" report "Sum not performed correctly" severity failure;
 
-    -- Shift operations test
-    a_state := x"00000005";
-    b_state := 32x"2";
-    a_tb <= std_logic_vector(a_state);
-    b_tb <= std_logic_vector(b_state);
-    op_sel_tb <= 10x"40";
+    --Substraction
+    modifier_tb <= '1';
     wait for 2 ns;
-    assert s_tb = x"00000014" report "Left shift performed unsuccesfully" severity failure;
-    a_state := x"ffffffff";
-    b_state := 32x"1f";
-    a_tb <= std_logic_vector(a_state);
-    b_tb <= std_logic_vector(b_state);
-    op_sel_tb <= 10x"40";
-    wait for 2 ns;
-    assert s_tb = x"80000000" report "Left shift performed unsuccesfully" severity failure;
+    assert c_tb = 32x"0" report "Substraction not performed correctly" severity failure;
 
-    a_state := x"00000005";
-    b_state := 32x"2";
-    a_tb <= std_logic_vector(a_state);
-    b_tb <= std_logic_vector(b_state);
-    op_sel_tb <= 10x"44";
+    --Shift Left Logical
+    modifier_tb <= '0';
+    op_select_tb <= "001";
+    a_tb <= 32x"5";
+    b_tb <= 32x"2";
     wait for 2 ns;
-    assert s_tb = x"00000001" report "Left shift performed unsuccesfully" severity failure;
-    a_state := x"ffffffff";
-    b_state := 32x"1f";
-    a_tb <= std_logic_vector(a_state);
-    b_tb <= std_logic_vector(b_state);
-    op_sel_tb <= 10x"44";
+    assert c_tb <= 32x"14" report "Left logical shift not performed correctly" severity failure;
+
+    --Set Less Than signed
+    op_select_tb <= "010";
+    a_tb <= 32x"14";
+    b_tb <= x"fffffffe";
     wait for 2 ns;
-    assert s_tb = x"00000001" report "Left shift performed unsuccesfully" severity failure;
+    assert c_tb <= 32x"1" report "Set less than signed not performed correctly" severity failure;
+    a_tb <= x"fffffffe";
+    b_tb <= 32x"14";
+    wait for 2 ns;
+    assert c_tb <= 32x"0" report "Set less than signed not performed correctly" severity failure;
+
+    --Set Less Than Unsigned
+    op_select_tb <= "011";
+    a_tb <= 32x"14";
+    b_tb <= 32x"20";
+    wait for 2 ns;
+    assert c_tb <= 32x"0" report "Set less than not performed correctly" severity failure;
+    a_tb <= 32x"20";
+    b_tb <= 32x"14";
+    wait for 2 ns;
+    assert c_tb <= 32x"1" report "Set less than not performed correctly" severity failure;
+
+    --XOR
+    op_select_tb <= "100";
+    a_tb <= 32x"aaaaaaaa";
+    b_tb <= 32x"55555555";
+    wait for 2 ns;
+    assert c_tb <= x"ffffffff" report "XOR not performed correctly" severity failure;
+
+    --Shift Right Logical
+    op_select_tb <= "101";
+    a_tb <= 32x"5";
+    b_tb <= 32x"2";
+    wait for 2 ns;
+    assert c_tb <= 32x"1" report "Right Logical Shift not performed correctly" severity failure;
+    
+    --Shift Right Arithmetic
+    modifier_tb <= '1';
+    a_tb <= 32x"fffffffe";
+    b_tb <= 32x"2";
+    wait for 2 ns;
+    assert c_tb <= x"ffffffff" report "Right arithmetic shift not performed correctly" severity failure;
+
+    --OR
+    op_select_tb <= "110";
+    a_tb <= 32x"aaaaaaaa";
+    b_tb <= 32x"5a5a5a5a";
+    wait for 2 ns;
+    assert c_tb <= x"fafafafa" report "OR not performed correctly" severity failure;
+    
+    --AND 
+    op_select_tb <= "111";
+    wait for 2 ns;
+    assert c_tb <= x"0a0a0a0a" report "AND not performed correctly" severity failure;
     finish;
 
-  end process stimuli;
+  end process;
 
 end architecture sim;
