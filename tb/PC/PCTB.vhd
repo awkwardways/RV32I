@@ -43,7 +43,22 @@ begin
     inc_tb <= '1';
     incbo_tb <= '0';
     offset_tb <= (others => '0');
-    wait;
+    wait on clk_tb;
+    wait on clk_tb;
+    wait for 10 ns;
+    assert pc_out_tb = 32x"1" report "Not incrementing correctly" severity failure;
+    incbo_tb <= '1';
+    offset_tb <= 32x"fffffffe";
+    wait on clk_tb;
+    wait on clk_tb;
+    wait for 10 ns;
+    assert pc_out_tb = 32x"ffffffff" report "Offset increment not functioning correctly" severity failure;
+    incbo_tb <= '0';
+    wait on clk_tb;
+    wait on clk_tb;
+    wait for 10 ns;
+    assert pc_out_tb = 32x"0" report "Offset increment not overflowing correctly" severity failure;
+    wait; 
   end process stimuli;
 
 end architecture sim;
