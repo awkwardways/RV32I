@@ -6,9 +6,9 @@ port(
   clk        : in std_logic;
   inc_pc     : out std_logic;
   instr_bus  : in std_logic_vector(31 downto 0);
-  ram_oce    : out std_logic;
-  ram_cen    : out std_logic;
-  ram_wre    : out std_logic := '0';
+  wre        : out std_logic;
+  begin_strb : out std_logic;
+  done_strb  : in std_logic;
   alu_en     : out std_logic := '0';
   alu_op     : out std_logic_vector(2 downto 0);
   rd_sel     : out std_logic_vector(4 downto 0);
@@ -19,14 +19,14 @@ end entity control_unit;
 
 architecture rtl of control_unit is
   signal instruction : std_logic_vector(31 downto 0);
+  type state_t is (address_ram, get_instruction, decode, increase_pc);
   signal state : state_t := address_ram;
 
-  type state_t is (address_ram, get_instruction, decode, increase_pc);
-  alias opcode is std_logic_vector(6 downto 0) : instruction(6 downto 0);
-  alias rd is std_logic_vector(4 downto 0) : instruction(11 downto 7);
-  alias funct3 is std_logic_vector(2 downto 0) : instruction(14 downto 12);
-  alias rs1 is std_logic_vector(4 downto 0) : instruction(19 downto 15);
-  alias imm_110 is std_logic_vector(11 downto 0) : instruction(31 downto 20);
+  alias opcode : std_logic_vector(6 downto 0) is instruction(6 downto 0);
+  alias rd : std_logic_vector(4 downto 0) is instruction(11 downto 7);
+  alias funct3 : std_logic_vector(2 downto 0) is instruction(14 downto 12);
+  alias rs1 : std_logic_vector(4 downto 0) is instruction(19 downto 15);
+  alias imm_110 : std_logic_vector(11 downto 0) is instruction(31 downto 20);
   constant OP_IMM : std_logic_vector(6 downto 0) := "0010011";
 
   
@@ -37,36 +37,33 @@ begin
     if rising_edge(clk) then
       case state is
         when address_ram => 
-          inc_pc <= '0';
-          ram_oce <= '0';
-          ram_cen <= '0';
+          begin_strb <= '1';
+          wre <= '0';
           state <= get_instruction;
-
-        when get_instruction => 
-
-          instruction <= instr_bus;
-          state <= decode;
         
+        when get_instruction => 
+          begin_strb <= '0';
+          if done_strb = '1' then
+            instruction <= instr_bus;
+            state <= decode;
+          end if;
+
         when decode => 
           case opcode is
-            when OP_IMM => 
-            alu_en <= '1';
-            alu_op <= funct3;
-            rd_sel <= rd;
-            rs1_sel <= rs1; 
-            if funct3 = "001" or funct3 = "101" then
-                
-            else
-            end if;
+            when "0010011" => 
+              alu_en <= '1';
+              alu_op <= funct3;
+              rs1_sel <= rs1;
+              rd_sel <= rd;
+            when others => state <= increase_pc;
           end case;
+          inc_pc <= '1';
           state <= increase_pc;
 
-
         when increase_pc => 
-          inc_pc <= '1';
-          ram_oce <= '1';
-          ram_cen <= '1';
+          inc_pc <= '0';
           state <= address_ram;
+    
       end case;
     end if;
   end process;
