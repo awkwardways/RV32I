@@ -13,7 +13,8 @@ port(
   alu_op     : out std_logic_vector(2 downto 0);
   rd_sel     : out std_logic_vector(4 downto 0);
   rs1_sel    : out std_logic_vector(4 downto 0);
-  rs2_sel    : out std_logic_vector(4 downto 0)
+  rs2_sel    : out std_logic_vector(4 downto 0);
+  immediate  : out std_logic_vector(31 downto 0)
 );
 end entity control_unit;
 
@@ -55,6 +56,7 @@ begin
               alu_op <= funct3;
               rs1_sel <= rs1;
               rd_sel <= rd;
+              immediate <= imm_110;
             when others => state <= increase_pc;
           end case;
           inc_pc <= '1';
