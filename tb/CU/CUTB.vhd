@@ -40,6 +40,8 @@ architecture sim of control_unit_tb is
   signal reset_tb       : std_logic;
   signal reg_wre_tb     : std_logic;
   signal immediate_tb   : std_logic_vector(DATA_WIDTH_TB - 1 downto 0);
+  signal imm_sel_tb     : std_logic;
+  signal mux_out_tb     : std_logic_vector(DATA_WIDTH_TB - 1 downto 0);
 
 begin
 
@@ -62,7 +64,8 @@ begin
     rs2_en => rs2_en_tb,
     reg_wre => reg_wre_tb,
     mem_busy => busy_tb,
-    immediate => immediate_tb
+    immediate => immediate_tb,
+    imm_sel => imm_sel_tb
   );
 
   PC: entity work.program_counter(rtl)
@@ -127,6 +130,17 @@ begin
     wre => reg_wre_tb 
   );
 
+  MUX: entity work.mux(rtl)
+  generic map(
+    DATA_WIDTH => DATA_WIDTH_TB
+  )
+  port map(
+    imm => immediate_tb,
+    reg => rs1_tb,
+    sel => imm_sel_tb,
+    outp => mux_out_tb
+  );
+
   ALU: entity work.alu(rtl)
   generic map(
     A_WIDTH => A_WIDTH_TB,
@@ -134,7 +148,7 @@ begin
     C_WIDTH => C_WIDTH_TB
   )
   port map(
-    a => rs1_tb,
+    a => mux_out_tb,
     b => rs2_tb,
     c => rd_tb,
     op_select => alu_op_tb,

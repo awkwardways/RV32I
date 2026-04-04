@@ -18,7 +18,8 @@ port(
   rs2_en     : out std_logic;
   reg_wre    : out std_logic;
   mem_busy   : in std_logic;
-  immediate  : out std_logic_vector(31 downto 0)
+  immediate  : out std_logic_vector(31 downto 0);
+  imm_sel    : out std_logic
 );
 end entity control_unit;
 
@@ -61,17 +62,20 @@ begin
               rs1_sel <= rs1;
               rs1_en <= '1';
               rd_sel <= rd;
+              imm_sel <= '1';
               immediate(11 downto 0) <= imm_110;
               immediate(31 downto 12) <= (others => imm_110(11));
             when others => state <= increase_pc;
           end case;
-          state <= increase_pc;
+          state <= execute;
           
         when execute => 
           inc_pc <= '1';
           reg_wre <= '1';
+          state <= increase_pc;
 
         when increase_pc => 
+          imm_sel <= '0';
           reg_wre <= '0';
           inc_pc <= '0';
           rs1_en <= '0';
@@ -92,6 +96,7 @@ begin
       reg_wre    <= '0';
       immediate  <= (others => '0');
       state      <= address_ram;
+      imm_sel    <= '0';
     end if;
   end process;
 
