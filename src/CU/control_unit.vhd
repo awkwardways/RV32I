@@ -49,6 +49,7 @@ architecture rtl of control_unit is
   constant OP     : std_logic_vector(6 downto 0) := "0110011";
   constant LOAD   : std_logic_vector(6 downto 0) := "0000011";
   constant STORE  : std_logic_vector(6 downto 0) := "0100011";
+  constant BRANCH : std_logic_vector(6 downto 0) := "1100011";
 
   component program_counter is
   port(
@@ -81,7 +82,7 @@ begin
           address_out <= count;
           wre <= '0';
           begin_strb <= '1';
-          inc_pc <= '1';
+          inc_pc <= '0';
           state <= store_instruction;
         
         when store_instruction => 
@@ -143,7 +144,7 @@ begin
               immediate(31 downto 12) <= (others => instruction(31));
               mem_mask <= "10" when (funct3 = "000" or funct3 = "100") else "01" when (funct3 = "001" or funct3 = "101") else "00" when funct3 = "010";
               state <= store_data;
-              
+                            
             when others => state <= get_next_instruction;
 
           end case;
@@ -157,6 +158,7 @@ begin
         when wait_store_data => 
           begin_strb <= '0';
           if done_strb = '1' then
+            inc_pc <= '1';
             state <= get_next_instruction;
           end if;
 
@@ -190,6 +192,7 @@ begin
 
         when execute => 
           reg_wre <= '1';
+          inc_pc <= '1';
           state <= get_next_instruction;
 
         when others => state <= get_next_instruction;
