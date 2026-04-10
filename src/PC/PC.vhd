@@ -3,11 +3,15 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity program_counter is
+generic(
+  OFFSET_WIDTH : integer := 20
+);
 port(
-  reset : in std_logic;
-  count : out std_logic_vector(11 downto 0);
-  clk   : in std_logic;
-  inc   : in std_logic
+  reset  : in std_logic;
+  count  : out std_logic_vector(11 downto 0);
+  clk    : in std_logic;
+  inc    : in std_logic;
+  offset : in std_logic_vector(OFFSET_WIDTH - 1 downto 0)
 );
 end entity program_counter;
 

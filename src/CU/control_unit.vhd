@@ -3,8 +3,9 @@ use ieee.std_logic_1164.all;
 
 entity control_unit is
 generic(
-  ADDR_WIDTH : integer := 12;
-  DATA_WIDTH : integer := 32
+  ADDR_WIDTH   : integer := 12;
+  DATA_WIDTH   : integer := 32;
+  OFFSET_WIDTH : integer := 20
 );
 port(
   clk         : in std_logic;
@@ -32,12 +33,14 @@ end entity control_unit;
 
 architecture rtl of control_unit is
   signal instruction : std_logic_vector(31 downto 0);
-  type state_t is (get_next_instruction, store_instruction, decode_instruction, execute, get_load_data, store_load_data, store_data, wait_store_data);
+  type state_t is (
+    get_next_instruction, store_instruction, decode_instruction, execute, get_load_data, store_load_data, store_data, wait_store_data, eval_branch);
   signal state : state_t := get_next_instruction;
   signal address : std_logic_vector(ADDR_WIDTH - 1 downto 0);
   signal data    : std_logic_vector(DATA_WIDTH - 1 downto 0);
   signal inc_pc  : std_logic;
   signal count   : std_logic_vector(ADDR_WIDTH - 1 downto 0); 
+  signal offset  : std_logic_vector(OFFSET_WIDTH - 1 downto 0);
 
   alias opcode : std_logic_vector(6 downto 0) is instruction(6 downto 0);
   alias rd : std_logic_vector(4 downto 0) is instruction(11 downto 7);
@@ -52,9 +55,13 @@ architecture rtl of control_unit is
   constant BRANCH : std_logic_vector(6 downto 0) := "1100011";
 
   component program_counter is
+  generic(
+    OFFSET_WIDTH : integer := 20
+  );
   port(
     reset, clk, inc : in std_logic;
-    count           : out std_logic_vector(ADDR_WIDTH - 1 downto 0)
+    count           : out std_logic_vector(ADDR_WIDTH - 1 downto 0);
+    offset          : out std_logic_vector(OFFSET_WIDTH - 1 downto 0)
   );
   end component program_counter;
 
@@ -65,7 +72,8 @@ begin
     reset => reset,
     clk => clk, 
     inc => inc_pc,  
-    count => count
+    count => count,
+    offset => offset
   );
 
   process(clk, reset)
@@ -144,11 +152,60 @@ begin
               immediate(31 downto 12) <= (others => instruction(31));
               mem_mask <= "10" when (funct3 = "000" or funct3 = "100") else "01" when (funct3 = "001" or funct3 = "101") else "00" when funct3 = "010";
               state <= store_data;
-                            
-            when others => state <= get_next_instruction;
 
+            when BRANCH => 
+              rs1_sel <= rs1;
+              rs2_sel <= rs2;
+              -- offset <= instruction(31) & instruction(7) & instruction(30 downto 25) & instruction(11 downto 8);
+              case funct3 is 
+                when "000" => 
+                  alu_op <= "100";
+                
+                when "001" => 
+                  alu_op <= "100";
+
+                when "100" => 
+                  alu_op <= "010";
+
+                when "101" => 
+                  alu_op <= "010";
+                
+                when "110" => 
+                  alu_op <= "011";
+
+                when "111" => 
+                  alu_op <= "011";
+
+                when others => alu_op <= "000";
+              end case;
+              state <= eval_branch;
+            when others => state <= get_next_instruction;
           end case;
-        
+
+        when eval_branch => 
+          case funct3 is 
+            when "000" => 
+              offset <= instruction(31) & instruction(7) & instruction(30 downto 25) & instruction(11 downto 8) when alu_in = 32x"0" else (others => '0');
+            
+            when "001" => 
+              offset <= instruction(31) & instruction(7) & instruction(30 downto 25) & instruction(11 downto 8) when alu_in /= 32x"0" else (others => '0');
+
+            when "100" => 
+              offset <= instruction(31) & instruction(7) & instruction(30 downto 25) & instruction(11 downto 8) when alu_in = 32x"1" else (others => '0');
+
+            when "101" => 
+              offset <= instruction(31) & instruction(7) & instruction(30 downto 25) & instruction(11 downto 8) when alu_in = 32x"0" else (others => '0');
+            
+            when "110" => 
+              offset <= instruction(31) & instruction(7) & instruction(30 downto 25) & instruction(11 downto 8) when alu_in = 32x"1" else (others => '0');
+
+            when "111" => 
+              offset <= instruction(31) & instruction(7) & instruction(30 downto 25) & instruction(11 downto 8) when alu_in = 32x"0" else (others => '0');
+            
+            when others => offset <= (others => '0');
+          end case;
+          state <= get_next_instruction;
+
         when store_data => 
           address_out <= alu_in(ADDR_WIDTH - 1 downto 0);
           wre <= '1';
@@ -213,6 +270,7 @@ begin
       imm_sel    <= '0';
       alu_mod    <= '0';
       mem_mask   <= (others => '0');
+      offset     <= (others => '0');
     end if;
   end process;
 
