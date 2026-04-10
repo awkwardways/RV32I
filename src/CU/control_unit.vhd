@@ -72,6 +72,7 @@ begin
     if rising_edge(clk) and reset = '0' then
       case state is
         when get_next_instruction => 
+          alu_mod <= '0';
           mem_mask <= "00";
           imm_sel <= '0';
           rs1_en <= '0';
@@ -171,10 +172,10 @@ begin
             case funct3 is
               when "000" => 
                 immediate(7 downto 0) <= data_in(7 downto 0);
-                immediate(31 downto 8) <= (others => alu_in(7));
+                immediate(31 downto 8) <= (others => data_in(7));
               when "001" => 
                 immediate(15 downto 0) <= data_in(15 downto 0);
-                immediate(31 downto 16) <= (others => alu_in(15));
+                immediate(31 downto 16) <= (others => data_in(15));
               when "010" => 
                 immediate <= data_in;
               when others => immediate <= data_in;
